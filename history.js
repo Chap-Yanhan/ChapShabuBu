@@ -1,5 +1,5 @@
 // history.js
-const API_BASE_URL = 'https://shabu-chap-app.onrender.com';
+const API_BASE_URL = 'https://chapshabubu.onrender.com';
 
 // ฟังก์ชันสำหรับแสดง Custom Alert (มีแค่ปุ่ม 'ตกลง')
 function showCustomAlert(title, message, isError = false) {
@@ -156,4 +156,5 @@ function printTableHistory(tableNumber) {
 }
 
 window.addEventListener('DOMContentLoaded', renderOrders);
+
 
