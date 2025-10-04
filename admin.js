@@ -1,5 +1,5 @@
 // admin.js (เวอร์ชันอัปเกรด - DOM Manipulation)
-const API_BASE_URL = 'https://shabu-chap-app.onrender.com';
+const API_BASE_URL = 'https://chapshabubu.onrender.com';
 
 // --- ฟังก์ชัน Helpers (ไม่มีการแก้ไข) ---
 function showCustomAlert(title, message, isError = false) {
@@ -279,3 +279,4 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('menu-form').addEventListener('submit', addOrUpdateMenu);
   document.getElementById('logout-btn').addEventListener('click', handleLogout);
 });
+
