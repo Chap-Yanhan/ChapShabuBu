@@ -1,5 +1,5 @@
 // SC.js (เวอร์ชันแก้ไข Real-time CRUD)
-const API_BASE_URL = 'https://shabu-chap-app.onrender.com';
+const API_BASE_URL = 'https://chapshabubu.onrender.com';
 
 let currentOrder = {};
 let allMenuItems = [];
@@ -474,3 +474,4 @@ window.addEventListener('DOMContentLoaded', async () => {
   connectWebSocket();
 
 });
+
