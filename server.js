@@ -28,7 +28,7 @@ const serviceAccountAuth = new JWT({
   key: creds.private_key,
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
-const doc = new GoogleSpreadsheet('153l20gBDNVvK5uV6fKiqeoCZZGbNwmS0J1Nyd3ReLgA', serviceAccountAuth); // ❗️ อย่าลืมเปลี่ยนเป็น Sheet ID ใหม่ของคุณ
+const doc = new GoogleSpreadsheet('1md973ZA2pfD4GZeZw5LdsCrDw1p4Uo-iph7Mc1_oeRc', serviceAccountAuth); // ❗️ อย่าลืมเปลี่ยนเป็น Sheet ID ใหม่ของคุณ
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -499,3 +499,4 @@ app.delete('/api/menu/:id', isAuthenticated, async (req, res) => {
 server.listen(PORT, () => {
   console.log(`Shabu Order Backend running on port ${PORT}`);
 });
+
