@@ -1,7 +1,7 @@
 // kitchen.js
 // สำหรับหน้าออเดอร์สด (ฝั่งครัว) - เพิ่มเสียงพูดแจ้งเตือน (เวอร์ชันแก้ไข)
 
-const API_BASE_URL = 'https://shabu-chap-app.onrender.com';
+const API_BASE_URL = 'https://chapshabubu.onrender.com';
 
 // --- [ปรับปรุง] ส่วนจัดการเสียงพูด ---
 let displayedOrderIds = new Set();
@@ -173,6 +173,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 setInterval(renderOrders, 5000);
+
 
 
 
