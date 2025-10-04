@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <!-- *** META VIEWPORT: บรรทัดที่สำคัญที่สุดสำหรับการแสดงผลบนมือถือ *** -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สั่งอาหาร - ชาบูชัป</title>
+  <!-- Google Fonts for a modern look -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styleno2.css">
+</head>
+<body>
+
+  <!-- Main container for the ordering app -->
+  <div class="container">
+    
+    <!-- Header Section -->
+    <header class="app-header">
+      <h1>สั่งอาหารชาบู</h1>
+      <p>เลือกเมนูที่ต้องการได้เลย</p>
+    </header>
+
+    <!-- Order Form -->
+    <form id="order-form">
+      
+      <!-- Table Selection Section -->
+      <div class="form-section">
+        <label for="table-number" class="form-label">🪑 หมายเลขโต๊ะของคุณ</label>
+        <select id="table-number" required>
+          <option value="">-- กรุณาเลือกโต๊ะ --</option>
+          <option value="โต๊ะ 1">โต๊ะ 1</option>
+          <option value="โต๊ะ 2">โต๊ะ 2</option>
+          <option value="โต๊ะ 3">โต๊ะ 3</option>
+          <option value="โต๊ะ 4">โต๊ะ 4</option>
+          <option value="โต๊ะ 5">โต๊ะ 5</option>
+          <option value="โต๊ะ 6">โต๊ะ 6</option>
+          <option value="โต๊ะ 7">โต๊ะ 7</option>
+          <option value="โต๊ะ 8">โต๊ะ 8</option>
+          <option value="โต๊ะ 9">โต๊ะ 9</option>
+          <option value="โต๊ะ 10">โต๊ะ 10</option>
+        </select>
+      </div>
+
+      <!-- Category Filter Section -->
+      <div class="form-section">
+        <h2 class="section-title">หมวดหมู่อาหาร</h2>
+        <div class="category-tabs">
+          <button type="button" class="tab-button active" data-category="all">ทั้งหมด</button>
+          <button type="button" class="tab-button" data-category="meat">เนื้อสัตว์</button>
+          <button type="button" class="tab-button" data-category="vegetable">ผัก</button>
+          <button type="button" class="tab-button" data-category="noodle">เส้น</button>
+          <button type="button" class="tab-button" data-category="shushi">ซูชิ</button>
+          <button type="button" class="tab-button" data-category="dessert">ของหวาน</button>
+        </div>
+      </div>
+
+      <!-- Menu Grid Section -->
+      <div id="menu-grid" class="menu-grid">
+        <!-- Menu items will be dynamically loaded here by SC.js -->
+        <div class="loading-placeholder">กำลังโหลดเมนู...</div>
+      </div>
+
+      <!-- Sticky Footer for Submit Button -->
+      <footer class="app-footer">
+        <!-- [แก้ไข] เพิ่ม div ครอบปุ่มและเพิ่มปุ่มใหม่ -->
+        <div class="footer-buttons">
+            <button type="submit" class="submit-btn">📤 ส่งออเดอร์</button>
+            <button type="button" id="status-btn" class="status-btn">เช็คสถานะออเดอร์</button>
+        </div>
+      </footer>
+
+    </form>
+  </div>
+  <style>
+      .app-footer {
+          /* ทำให้ footer รองรับ flexbox */
+          display: flex;
+          justify-content: center;
+      }
+      .footer-buttons {
+          display: flex;
+          gap: 10px;
+          width: 100%;
+          max-width: 500px; /* ปรับความกว้างสูงสุดได้ตามต้องการ */
+      }
+      .footer-buttons button {
+          flex: 1; 
+      }
+      .status-btn {
+          padding: 15px;
+          font-size: 1.1rem;
+          font-family: 'Sarabun', sans-serif;
+          font-weight: 700;
+          background-color: #6c757d; /* สีเทา */
+          color: white;
+          border: none;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+      }
+      .status-btn:active {
+          transform: scale(0.96);
+      }
+  </style>
+
+
+  <!-- Link to the JavaScript file -->
+  <script type="module" src="SC.js"></script>
+</body>
+</html>
+
+
+
+
+

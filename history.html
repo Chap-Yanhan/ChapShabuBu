@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ประวัติออเดอร์</title>
+  <link rel="stylesheet" href="styleno1.css">
+  <style>
+    /* สไตล์เดิม */
+    .order-list {margin:24px 0;}
+    .order-card {
+      background:#fff;
+      padding:16px 24px;
+      margin-bottom:16px;
+      border-radius:10px;
+      box-shadow:0 2px 8px #0001;
+    }
+    .order-card h3 {margin:0 0 8px 0;}
+    .order-card ul {margin:0 0 8px 0;}
+
+    /* --- [แก้ไขส่วนนี้ทั้งหมด] --- */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+
+    .topbar h1 {
+      font-size: 1.8em;
+      margin: 0;
+      color: #D81B60;
+    }
+
+    .topbar-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 220px;
+    }
+
+    .topbar button {
+      width: 100%;
+      padding: 10px 15px;
+      font-size: 1em;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+
+    .topbar button:hover {
+      opacity: 0.9;
+    }
+
+    /* ปุ่ม "ดูออเดอร์สด" (สีชมพูเข้ม) */
+    .live-order-btn {
+      background-color: #D81B60;
+    }
+
+    /* ปุ่ม "กลับหน้าจัดการเมนู" (สีฟ้า) */
+    .admin-back-btn {
+      background-color: #2196F3;
+    }
+    /* -------------------------- */
+
+    /* สไตล์กลุ่มปุ่มในการ์ด (เหมือนเดิม) */
+    .order-card-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      justify-content: center;
+    }
+    .order-card-actions button {
+      flex: 1;
+      max-width: 200px;
+      padding: 12px 15px;
+      font-size: 1em;
+      border-radius: 10px;
+    }
+    .order-card-actions .clear-btn {
+      background-color: #d81b60;
+      color: white;
+      border: none;
+    }
+    .order-card-actions .clear-btn:hover {
+      background-color: #b71c1c;
+    }
+    .order-card-actions .print-table-button {
+      background-color: #2196F3;
+      color: white;
+      border: none;
+    }
+    .order-card-actions .print-table-button:hover {
+      background-color: #1976D2;
+    }
+
+    /* สไตล์สำหรับซ่อน/แสดงตอนพิมพ์ (เหมือนเดิม) */
+    .order-summary-print { display: none; }
+    @media print {
+      body { background: none; padding: 0; margin: 0; }
+      .container { box-shadow: none; padding: 0; margin: 0; max-width: none; }
+      .topbar, .order-card-actions, .order-card.hide-for-print { display: none !important; }
+      .order-card .screen-only-title, .order-card .order-details-screen { display: none; }
+      .order-card .order-summary-print { display: block; }
+      .order-card { box-shadow: none; border: none; }
+      .order-summary-print h3 { text-align: center; font-size: 1.2em; margin-bottom: 15px; }
+      .order-summary-print ul { list-style: none; padding: 0; font-size: 0.9em; }
+      .order-summary-print li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #ccc; }
+      .order-summary-print li span { font-weight: bold; padding-left: 15px; }
+    }
+    /* Modal Pop-up Styles */
+    .custom-alert-popup {
+      position: fixed;
+      z-index: 10000;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .custom-alert-box {
+      background: #fff;
+      padding: 25px 35px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      min-width: 320px;
+      text-align: center;
+      animation: fadeInScale 0.3s ease-out;
+    }
+    .custom-alert-box h2 {
+      color: #d81b60;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+    .custom-alert-box p {
+      margin-bottom: 20px;
+      font-size: 1.1em;
+      color: #333;
+    }
+    .alert-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .custom-alert-box button {
+      background-color: #d81b60;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background-color 0.2s ease;
+      flex: 1;
+      max-width: 120px;
+    }
+    .custom-alert-box button:hover {
+      background-color: #b71c1c;
+    }
+    .custom-alert-box .cancel-button {
+      background-color: #6c757d;
+    }
+    .custom-alert-box .cancel-button:hover {
+      background-color: #5a6268;
+    }
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h1>📜 ประวัติออเดอร์</h1>
+      <div class="topbar-buttons">
+        <button onclick="window.location='kitchen.html'" class="live-order-btn">ดูออเดอร์สด</button>
+        <button onclick="window.location='admin.html'" class="admin-back-btn">กลับหน้าจัดการเมนู</button>
+      </div>
+    </div>
+    <div id="order-list" class="order-list"></div>
+  </div>
+
+  <div class="custom-alert-popup" style="display: none;">
+    <div class="custom-alert-box">
+      <h2 id="alert-title"></h2>
+      <p id="alert-message"></p>
+      <div class="alert-buttons">
+        </div>
+    </div>
+  </div>
+
+  <script type="module" src="history.js"></script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="styleno1.css">
+  <style>
+    .admin-container {
+      background: #fef1f1;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 900px;
+      margin: 20px auto;
+    }
+    .admin-nav {
+      display: flex;
+      justify-content: flex-start;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .admin-nav button {
+      background-color: #d81b60;
+      color: white;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background-color 0.3s ease;
+    }
+    .admin-nav button:hover {
+      background-color: #b71c1c;
+    }
+    .menu-management h2 {
+      text-align: center;
+      color: #d81b60;
+      margin-bottom: 20px;
+    }
+    .menu-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #f0f0f0;
+      border-radius: 8px;
+      background: #fdfdfd;
+    }
+    .menu-form label {
+      font-weight: bold;
+      margin-bottom: 5px;
+      display: block;
+    }
+    .menu-form input[type="text"],
+    .menu-form select,
+    .menu-form input[type="file"] {
+      width: calc(100% - 22px);
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .menu-form button {
+      grid-column: span 2;
+      background-color: #4CAF50;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1.1em;
+      transition: background-color 0.3s ease;
+    }
+    .menu-form button:hover {
+      background-color: #45a049;
+    }
+    .menu-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 20px;
+    }
+    .menu-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      text-align: center;
+      padding-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .menu-card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      margin-bottom: 10px;
+    }
+    .menu-card h4 {
+      margin: 0 0 5px 0;
+      padding: 0 10px;
+      font-size: 1.1em;
+    }
+    .menu-card p {
+      color: #666;
+      font-size: 0.9em;
+      margin: 0 0 10px 0;
+      padding: 0 10px;
+    }
+    .menu-card-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 10px;
+    }
+    .menu-card-actions button {
+      flex: 1;
+      padding: 8px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: background-color 0.3s ease;
+    }
+    .menu-card-actions .edit-btn {
+      background-color: #2196F3;
+      color: white;
+    }
+    .menu-card-actions .edit-btn:hover {
+      background-color: #1976D2;
+    }
+    .menu-card-actions .delete-btn {
+      background-color: #F44336;
+      color: white;
+    }
+    .menu-card-actions .delete-btn:hover {
+      background-color: #D32F2F;
+    }
+    #logout-btn {
+      background-color: #f44336;
+    }
+    #logout-btn:hover {
+      background-color: #d32f2f;
+    }
+    /* สไตล์สำหรับรูปภาพตัวอย่าง */
+    #image-preview {
+        max-width: 150px;
+        max-height: 150px;
+        margin-top: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+    }
+    .menu-card-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 10px;
+    }
+    .toggle-btn {
+      width: 100%;
+      padding: 8px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9em;
+      margin-top: 10px;
+      transition: background-color 0.3s ease;
+    }
+    .toggle-btn.available {
+      background-color: #28a745; /* สีเขียว */
+      color: white;
+    }
+    .toggle-btn.unavailable {
+      background-color: #dc3545; /* สีแดง */
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container admin-container">
+    <div class="admin-nav">
+      <button onclick="window.location='history.html'" class="history-btn">📊 ดูประวัติออเดอร์</button>
+      <button onclick="window.location='kitchen.html'" class="kitchen-btn">🍳 ดูออเดอร์ครัว</button>
+      <button id="logout-btn">🚪 ออกจากระบบ</button>
+    </div>
+
+    <div class="menu-management">
+      <h2>จัดการเมนูชาบู</h2>
+      <h3>เพิ่ม/แก้ไขเมนู</h3>
+      <form id="menu-form" class="menu-form">
+        <input type="hidden" id="menu-id">
+        <div>
+          <label for="menu-name">ชื่อเมนู:</label>
+          <input type="text" id="menu-name" required>
+        </div>
+        <div>
+          <label for="menu-category">หมวดหมู่:</label>
+          <select id="menu-category" required>
+            <option value="">-- เลือกหมวดหมู่ --</option>
+            <option value="meat">เนื้อสัตว์</option>
+            <option value="vegetable">ผัก/ไข่ไก่</option>
+            <option value="noodle">เส้น</option>
+            <option value="shushi">ซูชิ</option>
+            <option value="dessert">ของหวาน</option>
+          </select>
+        </div>
+        <div style="grid-column: span 2;">
+          <label for="menu-image">รูปภาพเมนู:</label>
+          <input type="file" id="menu-image" accept="image/*">
+          <img id="image-preview" src="#" alt="Image Preview" style="display: none;">
+        </div>
+        <button type="submit" id="submit-menu-btn">เพิ่มเมนู</button>
+      </form>
+
+      <h3>รายการเมนูปัจจุบัน</h3>
+      <div id="menu-list" class="menu-list"></div>
+    </div>
+  </div>
+
+  <div class="custom-alert-popup" style="display: none;">
+    <div class="custom-alert-box">
+      <h2 id="alert-title"></h2>
+      <p id="alert-message"></p>
+      <div class="alert-buttons"></div>
+    </div>
+  </div>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

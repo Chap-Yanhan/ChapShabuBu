@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ออเดอร์สดส่งมาห้องครัว</title>
+  <link rel="stylesheet" href="styleno1.css">
+  <style>
+    .order-list {margin:24px 0;}
+    .order-card {background:#fff;padding:16px 24px;margin-bottom:16px;border-radius:10px;box-shadow:0 2px 8px #0001;}
+    .order-card h3 {margin:0 0 8px 0;}
+    .order-card ul {margin:0 0 8px 0;}
+    .order-card button {margin-right:8px;}
+    
+    /* [CHANGE START] ปรับแต่ง topbar และเพิ่ม class สำหรับกลุ่มปุ่ม */
+    .topbar {
+      display: flex;
+      justify-content: space-between; /* จัดให้หัวข้อและกลุ่มปุ่มอยู่คนละฝั่ง */
+      align-items: center; /* จัดแนวตั้งให้อยู่ตรงกลาง */
+      flex-wrap: wrap; /* ให้ปุ่มขึ้นบรรทัดใหม่ได้ถ้าหน้าจอเล็ก */
+      gap: 10px; /* ระยะห่างระหว่างหัวข้อกับกลุ่มปุ่ม */
+    }
+
+    .topbar-buttons {
+      display: flex;
+      gap: 10px; /* ระยะห่างระหว่างปุ่ม */
+      flex-wrap: wrap; /* ให้ปุ่มในกลุ่มขึ้นบรรทัดใหม่ได้ถ้าหน้าจอเล็ก */
+      justify-content: flex-end; /* จัดกลุ่มปุ่มชิดขวา */
+    }
+
+    /* ปรับขนาดตัวอักษรของหัวข้อและปุ่มให้เหมาะสม ถ้าจำเป็น */
+    .topbar h1 {
+      font-size: 1.8em; /* สามารถปรับได้ตามความเหมาะสม */
+      margin: 0; /* ลบ margin เริ่มต้นของ h1 */
+    }
+
+    .topbar button {
+      padding: 8px 15px;
+      font-size: 0.95em; /* สามารถปรับได้ตามความเหมาะสม */
+      border-radius: 5px; /* ทำให้ปุ่มมนขึ้นเล็กน้อย */
+      border: none;
+      cursor: pointer;
+      background-color: #d81b60; /* สีปุ่มหลัก */
+      color: white;
+      transition: background-color 0.3s ease;
+    }
+
+    .topbar button:hover {
+      background-color: #b71c1c; /* สีปุ่มตอนโฮเวอร์ */
+    }
+
+    /* สไตล์สำหรับปุ่ม "กลับหน้าจัดการเมนู" อาจจะให้สีต่างจากปุ่ม "ดูประวัติออเดอร์" */
+    .topbar .admin-back-btn { /* เพิ่ม class 'admin-back-btn' ให้กับปุ่มกลับหน้า admin */
+        background-color: #2196F3; /* สีฟ้า */
+    }
+    .topbar .admin-back-btn:hover {
+        background-color: #1976D2;
+    }
+    /* [CHANGE END] */
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h1>🍲 ออเดอร์สดส่งมาห้องครัว</h1> 
+      <div class="topbar-buttons">
+        <button onclick="window.location='history.html'">ดูประวัติออเดอร์</button>
+        <button onclick="window.location='admin.html'" class="admin-back-btn">กลับหน้าจัดการเมนู</button>
+      </div>
+      </div>
+    <div id="order-list" class="order-list"></div>
+  </div>
+  <script type="module" src="kitchen.js"></script>
+</body>
+</html>
