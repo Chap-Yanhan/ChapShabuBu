@@ -28,163 +28,285 @@ const serviceAccountAuth = new JWT({
   key: creds.private_key,
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
-const doc = new GoogleSpreadsheet('1md973ZA2pfD4GZeZw5LdsCrDw1p4Uo-iph7Mc1_oeRc', serviceAccountAuth);
+const doc = new GoogleSpreadsheet('1md973ZA2pfD4GZeZw5LdsCrDw1p4Uo-iph7Mc1_oeRc', serviceAccountAuth); // ❗️ อย่าลืมเปลี่ยนเป็น Sheet ID ใหม่ของคุณ
 
-
-// ----------------------------------------------------------------------
-// --- [ใหม่] ฟังก์ชันสำหรับบันทึกออเดอร์ลง Google Sheet ---
-// ----------------------------------------------------------------------
-async function logOrderToSheet(orderId, tableNumber, items) {
-  try {
-    // ใช้ loadInfo เพื่อให้มั่นใจว่าข้อมูลชีตล่าสุด
-    await doc.loadInfo(); 
-    const sheet = doc.sheetsByIndex[0]; // สมมติว่าชีตแรกคือชีตสำหรับออเดอร์
-    
-    // เตรียมแถวข้อมูลสำหรับแต่ละรายการในออเดอร์
-    const rows = Object.entries(items).map(([name, qty]) => ({
-      Timestamp: new Date().toLocaleString('th-TH'),
-      OrderId: orderId.toString(), // แปลง OrderId เป็น String เพื่อความชัวร์
-      Table: tableNumber.toString(), // แปลง Table Number เป็น String
-      MenuItem: name,
-      Quantity: qty,
-      Status: 'pending' 
-    }));
-
-    if (rows.length > 0) {
-      await sheet.addRows(rows);
-      console.log(`✔️ Logged Order ${orderId} (Table ${tableNumber}) to Google Sheet.`);
-    }
-  } catch (error) {
-    console.error('❌ Error logging order to Google Sheet:', error.message);
-    // ไม่ต้อง throw error ออกไป เพราะถึงแม้จะบันทึกใน Sheet ไม่ได้ แต่ออเดอร์ยังอยู่ใน DB
-  }
-}
-
-// ----------------------------------------------------------------------
-// --- ส่วนของ Database และ Middleware อื่นๆ (เดิม) ---
-// ----------------------------------------------------------------------
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false, // สำหรับการเชื่อมต่อกับ Heroku/Render
-  },
-});
-
-// ตรวจสอบการเชื่อมต่อ
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('Error connecting to the database', err.stack);
-  } else {
-    console.log('Database connected successfully:', res.rows[0].now);
+    rejectUnauthorized: false
   }
 });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true,
-}));
-app.use(express.json());
-
-// ตั้งค่า Multer สำหรับการอัปโหลดไฟล์ (ใช้สำหรับเมนู)
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-});
-
-// ตั้งค่า Session (ใช้สำหรับ Admin Login)
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'a-very-secret-key',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production', // ใช้ true ใน production (HTTPS)
-    maxAge: 24 * 60 * 60 * 1000 // 24 ชั่วโมง
-  }
-}));
-
-// Middleware ตรวจสอบสิทธิ์ Admin
-const isAuthenticated = (req, res, next) => {
-  if (req.session.isAdmin) {
-    next();
-  } else {
-    res.status(401).json({ error: 'Unauthorized' });
-  }
-};
-
-// ----------------------------------------------------------------------
-// --- ส่วนของ WebSocket Setup (เดิม) ---
-// ----------------------------------------------------------------------
+// --- [เพิ่ม] สร้าง HTTP Server และ WebSocket Server ---
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
-const wsClients = [];
+
+const clients = new Set();
 
 wss.on('connection', (ws) => {
-  wsClients.push(ws);
-  console.log('New client connected via WebSocket. Total clients:', wsClients.length);
-
+  console.log('Client connected via WebSocket');
+  clients.add(ws);
   ws.on('close', () => {
-    const index = wsClients.indexOf(ws);
-    if (index > -1) {
-      wsClients.splice(index, 1);
-    }
-    console.log('Client disconnected. Total clients:', wsClients.length);
+    console.log('Client disconnected');
+    clients.delete(ws);
   });
 });
 
-// ฟังก์ชันสำหรับส่งข้อมูลไปยังทุก Client ที่เชื่อมต่ออยู่
 function broadcast(data) {
   const message = JSON.stringify(data);
-  wsClients.forEach(client => {
+  for (const client of clients) {
     if (client.readyState === client.OPEN) {
       client.send(message);
     }
-  });
+  }
 }
 
-// ----------------------------------------------------------------------
-// --- ส่วนของ Static Files (เดิม) ---
-// ----------------------------------------------------------------------
-app.use(express.static(path.join(__dirname)));
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-// ----------------------------------------------------------------------
-// --- ส่วนของ Admin Login/Logout API (เดิม) ---
-// ----------------------------------------------------------------------
-// ... (โค้ดส่วน Admin Login/Logout เดิม)
-app.post('/admin/login', async (req, res) => {
-  const { username, password } = req.body;
-  
-  if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
-    req.session.isAdmin = true;
-    return res.json({ success: true, message: 'Login successful' });
+app.use(session({
+  secret: 'your_super_secret_key_for_session_shabu',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 3600000 }
+}));
+
+let orders = [];
+let tableClearanceTimestamps = {};
+
+async function setupDatabase() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS menu (
+        id VARCHAR(255) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        image VARCHAR(255),
+        is_available BOOLEAN DEFAULT TRUE
+      );
+    `);
+    
+    const res = await client.query("SELECT column_name FROM information_schema.columns WHERE table_name='menu' AND column_name='is_available'");
+    if (res.rowCount === 0) {
+      await client.query('ALTER TABLE menu ADD COLUMN is_available BOOLEAN DEFAULT TRUE');
+      console.log('Added "is_available" column to "menu" table.');
+    }
+    
+    console.log('Database table "menu" is ready.');
+  } catch (err) {
+    console.error('Error setting up database table:', err);
+  } finally {
+    client.release();
   }
-  res.status(401).json({ success: false, message: 'ID หรือรหัสผ่านไม่ถูกต้อง' });
+}
+setupDatabase();
+
+async function logDailySalesToSheet(orderData) {
+  try {
+    await doc.loadInfo();
+    const sheet = doc.sheetsByIndex[0];
+    const { id: orderId, table, items, time, status } = orderData; 
+    const menuResult = await pool.query('SELECT name, category FROM menu'); 
+    const menuMap = new Map(menuResult.rows.map(item => [item.name, item.category])); 
+    const orderTimeUTC = new Date(time); 
+    orderTimeUTC.setHours(orderTimeUTC.getUTCHours() + 7); 
+    const formattedTimestamp = orderTimeUTC.toLocaleString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    for (const [itemName, quantity] of Object.entries(items)) { 
+      const category = menuMap.get(itemName) || 'Unknown'; 
+      await sheet.addRow({ Timestamp: formattedTimestamp, Table: table, 'Order ID': orderId, Status: status, MenuItem: itemName, Category: category, Quantity: quantity });
+    }
+    console.log('Order logged to Google Sheet successfully with flat structure.');
+  } catch (error) {
+    console.error('Error logging order to Google Sheets:', error); 
+  }
+}
+
+// --- [แก้ไข/เปลี่ยน] ฟังก์ชันสำหรับลบรายการอาหารออกจาก Google Sheet ด้วย Batch Logic (แก้ไข Range not found) ---
+async function batchDeleteItemFromGoogleSheet(itemsToDelete) {
+  try {
+    await doc.loadInfo();
+    const sheet = doc.sheetsByIndex[0]; 
+    
+    // 1. ดึงแถวทั้งหมด
+    const rows = await sheet.getRows(); 
+    
+    // 2. ค้นหา **Array Index** (0-based) ของแถวที่ต้องการลบ
+    const rowsToDeleteArrayIndexes = [];
+    
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const orderId = row.get('Order ID');
+      const menuItem = row.get('MenuItem');
+      
+      const foundMatch = itemsToDelete.some(item => 
+        item.orderId === String(orderId) && item.menuItemName === menuItem
+      );
+
+      if (foundMatch) {
+        // เก็บ **Array Index** (i) ซึ่งเป็น 0-based
+        rowsToDeleteArrayIndexes.push(i); 
+      }
+    }
+
+    if (rowsToDeleteArrayIndexes.length === 0) {
+      console.log('[Google Sheet] No rows found to delete in batch.');
+      return;
+    }
+    
+    // 3. เรียงลำดับ Array Index จากมากไปน้อย (**ลบจากล่างขึ้นบน**)
+    rowsToDeleteArrayIndexes.sort((a, b) => b - a);
+
+    // 4. ลบทีละแถวตามลำดับย้อนกลับ
+    for (const arrayIndex of rowsToDeleteArrayIndexes) {
+      // ใช้ row.delete() บน Object แถวโดยตรง ซึ่งเสถียรที่สุดในการลบแบบเรียงลำดับ
+      await rows[arrayIndex].delete(); 
+      console.log(`[Google Sheet] Sequentially deleted Array Index ${arrayIndex} (Sheet Row: ${arrayIndex + 2}) in batch cleanup.`);
+    }
+    
+    console.log(`[Google Sheet] Successfully performed batch deletion of ${rowsToDeleteArrayIndexes.length} items.`);
+  } catch (error) {
+    console.error('[Google Sheet] Error during batch deletion:', error.message);
+    // re-throw error เพื่อให้ Background Task รับรู้ความล้มเหลว
+    throw error; 
+  }
+}
+// -----------------------------------------------------------
+
+function isAuthenticated(req, res, next) {
+  if (req.session.isAuthenticated) { return next(); }
+  res.redirect('/admin_login.html');
+}
+app.get('/kitchen.html', isAuthenticated, (req, res) => { res.sendFile(path.join(__dirname, 'kitchen.html')); });
+app.get('/history.html', isAuthenticated, (req, res) => { res.sendFile(path.join(__dirname, 'history.html')); });
+app.use(express.static(__dirname));
+
+app.post('/admin/login', (req, res) => {
+  const { username, password } = req.body;
+  if (username === 'chap' && password === '123456') {
+    req.session.isAuthenticated = true;
+    res.json({ success: true, message: 'Login successful' });
+  } else {
+    res.status(401).json({ success: false, message: 'Invalid credentials' });
+  }
 });
 
 app.get('/admin/logout', (req, res) => {
   req.session.destroy(err => {
-    if (err) {
-      return res.status(500).json({ success: false, message: 'Could not log out' });
-    }
-    res.json({ success: true, message: 'Logged out successfully' });
+    if (err) { return res.status(500).json({ success: false, message: 'Could not log out.' }); }
+    res.json({ success: true, message: 'Logged out successfully.' });
   });
 });
 
-// ตรวจสอบสถานะการล็อกอิน
-app.get('/admin/status', (req, res) => {
-  if (req.session.isAdmin) {
-    res.json({ isLoggedIn: true });
-  } else {
-    res.json({ isLoggedIn: false });
-  }
+app.get('/admin/check-auth', (req, res) => {
+  res.json({ isAuthenticated: !!req.session.isAuthenticated });
 });
 
-// ----------------------------------------------------------------------
-// --- ส่วนของ Menu API (เดิม) ---
-// ----------------------------------------------------------------------
-// GET /api/menu: ดึงรายการเมนูทั้งหมด
+app.post('/orders', async (req, res) => {
+  const { table, items } = req.body;
+  if (!table || !items || typeof items !== 'object' || Object.keys(items).length === 0) {
+    return res.status(400).json({ error: 'ข้อมูลออเดอร์ไม่ครบถ้วน' });
+  }
+
+  try {
+    const itemNames = Object.keys(items);
+    
+    const stockCheckQuery = await pool.query(
+      'SELECT name, is_available FROM menu WHERE name = ANY($1::text[])',
+      [itemNames]
+    );
+
+    for (const itemName of itemNames) {
+        const itemStatus = stockCheckQuery.rows.find(row => row.name === itemName);
+        if (!itemStatus || !itemStatus.is_available) {
+            return res.status(400).json({ 
+                error: `ขออภัย, เมนู "${itemName}" หมดสต็อกแล้ว กรุณาลองใหม่อีกครั้ง` 
+            });
+        }
+    }
+  } catch(dbError) {
+      console.error("Database error during stock check:", dbError);
+      return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการตรวจสอบสต็อก' });
+  }
+
+  const now = new Date();
+  const order = { id: 'order_' + now.getTime(), table, items, time: now.toISOString(), status: 'pending' };
+  orders.push(order);
+  logDailySalesToSheet(order);
+  res.json({ success: true, order });
+});
+
+app.get('/orders', (req, res) => {
+    const { status, table } = req.query;
+    let result = orders;
+    if (status) result = result.filter(o => o.status === status);
+    if (table) result = result.filter(o => o.table === table);
+    result = result.sort((a, b) => new Date(b.time) - new Date(a.time));
+    res.json(result);
+});
+
+app.put('/orders/:id', async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    const idx = orders.findIndex(o => o.id === id);
+    if (idx === -1) {
+        return res.status(404).json({ error: 'ไม่พบออเดอร์' });
+    }
+    const oldStatus = orders[idx].status;
+    if (status && status !== oldStatus) {
+        orders[idx].status = status;
+        res.json({ success: true, order: orders[idx] }); 
+        (async () => { // **[ใหม่]** เปลี่ยนเป็น Background Task
+            try {
+                await doc.loadInfo();
+                const sheet = doc.sheetsByIndex[0];
+                const rows = await sheet.getRows(); 
+                const rowsToUpdate = rows.filter(row => row.get('Order ID') === id);
+                for (const row of rowsToUpdate) {
+                    if (row.get('Status') !== status) { 
+                        row.set('Status', status);
+                        await row.save();
+                    }
+                }
+                console.log(`Status for Order ID ${id} updated to ${status} in Google Sheet successfully (background task).`);
+            } catch (error) {
+                console.error('Error updating status in Google Sheet (background task):', error);
+            }
+        })();
+    } else {
+        res.json({ success: true, order: orders[idx] });
+    }
+});
+
+app.delete('/orders', (req, res) => {
+    const { table, status } = req.query;
+    if (!table || !status) return res.status(400).json({ error: 'ต้องระบุ table และ status' });
+    const before = orders.length;
+    orders = orders.filter(o => !(o.table === table && o.status === status));
+    tableClearanceTimestamps[table] = new Date().getTime();
+    console.log(`Table ${table} cleared at ${new Date(tableClearanceTimestamps[table]).toLocaleTimeString()}`);
+    res.json({ success: true, deleted: before - orders.length });
+});
+
+app.get('/orders/by-table', (req, res) => {
+    const { table } = req.query;
+    if (!table) {
+        return res.status(400).json({ error: 'Table number is required' });
+    }
+    const lastClearTimestamp = tableClearanceTimestamps[table] || 0;
+    const sessionOrders = orders.filter(order => 
+        order.table === table && new Date(order.time).getTime() > lastClearTimestamp
+    );
+    res.json(sessionOrders);
+});
+
 app.get('/api/menu', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM menu ORDER BY name ASC');
@@ -195,101 +317,151 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
-// POST /api/menu: เพิ่มเมนูใหม่ (Admin only)
-app.post('/api/menu', isAuthenticated, upload.single('image'), async (req, res) => {
-  const { name, category } = req.body;
-  let imageUrl = null;
-  
-  if (!name || !category) {
-    return res.status(400).json({ error: 'Missing name or category' });
-  }
-
-  try {
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(`data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`, {
-        folder: 'shabumenu',
-        resource_type: 'image'
-      });
-      imageUrl = result.secure_url;
-    }
-
-    const result = await pool.query(
-      'INSERT INTO menu (name, category, image, is_available) VALUES ($1, $2, $3, TRUE) RETURNING *',
-      [name, category, imageUrl]
-    );
-    
-    // --- [แก้ไข] เพิ่มการ broadcast เมื่อเพิ่มเมนูใหม่ ---
-    broadcast({
-      type: 'MENU_ITEM_ADDED',
-      payload: result.rows[0]
-    });
-    
-    res.status(201).json({ success: true, item: result.rows[0] });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Cloudinary or Database error' });
-  }
-});
-
-// PUT /api/menu/:id/toggle: เปลี่ยนสถานะพร้อมขาย (Admin only)
-app.put('/api/menu/:id/toggle', isAuthenticated, async (req, res) => {
+app.put('/api/menu/:id/toggle-availability', isAuthenticated, async (req, res) => {
   const { id } = req.params;
   try {
+    // [แก้ไข] เปลี่ยน RETURNING เพื่อดึงข้อมูลทั้งหมด (รวมถึง 'name')
     const result = await pool.query(
       'UPDATE menu SET is_available = NOT is_available WHERE id = $1 RETURNING *',
       [id]
     );
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'ไม่พบเมนู' });
+    if (result.rowCount > 0) {
+      const updatedItem = result.rows[0];
+        
+      // --- [ใหม่] Logic จัดการออเดอร์ที่ค้างอยู่ เมื่อเมนูเป็นของหมด (is_available = false) ---
+      if (updatedItem.is_available === false) { 
+          const menuName = updatedItem.name;
+          
+          // กรองออเดอร์ที่ 'pending' และมีรายการอาหารที่เพิ่งหมดสต็อก
+          const ordersToProcess = orders.filter(o => 
+              o.status === 'pending' && o.items[menuName]
+          );
+
+          // [แก้ไข] เตรียม Array สำหรับเก็บรายการที่จะถูกลบออกจาก Google Sheet
+          const itemsToDeleteFromSheet = [];
+
+          for (const order of ordersToProcess) {
+              const orderId = order.id;
+              
+              // 1. เพิ่มรายการที่ต้องลบเข้าใน Batch Array
+              itemsToDeleteFromSheet.push({ orderId, menuItemName: menuName });
+
+              // 2. ลบรายการอาหารออกจาก Object ใน memory (ทำทันที)
+              delete order.items[menuName]; 
+              
+              // 3. ตรวจสอบสถานะออเดอร์หลังลบ (ทำทันทีและ Broadcast ทันที)
+              if (Object.keys(order.items).length === 0) {
+                  // ออเดอร์ว่างเปล่า, ลบทิ้งจาก orders array ใน memory
+                  const idx = orders.findIndex(o => o.id === orderId);
+                  if (idx > -1) {
+                      orders.splice(idx, 1);
+                  }
+
+                  // ส่งสัญญาณลบออเดอร์
+                  broadcast({ type: 'ORDER_DELETED', payload: { id: orderId } });
+                  console.log(`[Order Adjusted] Order ${orderId} deleted (all items were the removed menu).`);
+              } else {
+                  // ยังเหลือรายการอื่น, ส่งสัญญาณอัปเดต
+                  broadcast({ type: 'ORDER_UPDATED', payload: order });
+                  console.log(`[Order Adjusted] Order ${orderId} updated, removed item: ${menuName}.`);
+              }
+          }
+
+          // [แก้ไข: Final Fix V2] เริ่ม Background Task สำหรับการลบแบบ Batch
+          if (itemsToDeleteFromSheet.length > 0) {
+              (async () => {
+                  try {
+                      // เรียกใช้ฟังก์ชัน Batch เพียงครั้งเดียว (ภายในมีการลบแบบ Reverse Sequential)
+                      await batchDeleteItemFromGoogleSheet(itemsToDeleteFromSheet);
+                      console.log('[Google Sheet Cleanup] Finished batch background deletion.');
+                  } catch (e) {
+                      console.error('Google Sheet batch deletion background task failed:', e);
+                  }
+              })();
+          }
+          
+      }
+      // -----------------------------------------------------------------------------------------
+
+      // [แก้ไข] Broadcast สถานะเมนูใหม่ (เพิ่ม name ใน payload)
+      broadcast({
+        type: 'MENU_STATUS_UPDATE',
+        payload: { 
+            id: updatedItem.id, 
+            is_available: updatedItem.is_available, 
+            name: updatedItem.name 
+        }
+      });
+      
+      // ส่ง Response กลับไปให้ Client ทันทีโดยไม่ต้องรอ Google Sheet
+      res.json({ success: true, item: updatedItem });
+      
+    } else {
+      res.status(404).json({ error: 'ไม่พบเมนู' });
     }
-    
-    // --- [แก้ไข] เพิ่มการ broadcast เมื่อเปลี่ยนสถานะเมนู ---
-    broadcast({
-      type: 'MENU_ITEM_TOGGLED',
-      payload: result.rows[0]
-    });
-    
-    res.json({ success: true, item: result.rows[0] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Database error' });
   }
 });
 
-// PUT /api/menu/:id: แก้ไขเมนู (Admin only)
-app.put('/api/menu/:id', isAuthenticated, upload.single('image'), async (req, res) => {
-  const { id } = req.params;
-  const { name, category, currentImage } = req.body;
-  let imageUrl = currentImage;
-  
+app.post('/api/menu', isAuthenticated, upload.single('image'), async (req, res) => {
+  const { name, category } = req.body;
   if (!name || !category) {
-    return res.status(400).json({ error: 'Missing name or category' });
+    return res.status(400).json({ error: 'ต้องระบุชื่อและหมวดหมู่' });
   }
-
+  let imageUrl = '';
   try {
     if (req.file) {
-      // อัปโหลดรูปใหม่
-      const result = await cloudinary.uploader.upload(`data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`, {
-        folder: 'shabumenu',
-        resource_type: 'image'
-      });
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+      const result = await cloudinary.uploader.upload(dataURI, { folder: "shabu-menu" });
       imageUrl = result.secure_url;
-
-      // [Optional] ลบรูปเก่าใน Cloudinary
-      if (currentImage) {
-        const publicIdWithFolder = currentImage.substring(currentImage.lastIndexOf('/') + 1, currentImage.lastIndexOf('.'));
-        await cloudinary.uploader.destroy(`shabumenu/${publicIdWithFolder}`);
-      }
     }
+    const id = 'menu_' + Date.now();
+    const dbResult = await pool.query( 'INSERT INTO menu (id, name, category, image) VALUES ($1, $2, $3, $4) RETURNING *', [id, name, category, imageUrl] );
+    
+    // --- [แก้ไข] เพิ่มการ broadcast เมื่อสร้างเมนูใหม่ ---
+    broadcast({
+      type: 'MENU_ITEM_ADDED',
+      payload: dbResult.rows[0]
+    });
+    
+    res.status(201).json({ success: true, item: dbResult.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Cloudinary or Database error' });
+  }
+});
 
-    const result = await pool.query('UPDATE menu SET name = $1, category = $2, image = $3 WHERE id = $4 RETURNING *', [name, category, imageUrl, id] );
-    
+app.put('/api/menu/:id', isAuthenticated, upload.single('image'), async (req, res) => {
+  const { id } = req.params;
+  const { name, category } = req.body;
+  try {
+    const oldData = await pool.query('SELECT image FROM menu WHERE id = $1', [id]);
+    if (oldData.rowCount === 0) {
+      return res.status(404).json({ error: 'ไม่พบเมนู' });
+    }
+    let imageUrl = oldData.rows[0].image;
+    if (req.file) {
+      if (imageUrl) {
+        const publicIdWithFolder = imageUrl.substring(imageUrl.indexOf('shabu-menu/'));
+        const publicId = publicIdWithFolder.substring(0, publicIdWithFolder.lastIndexOf('.'));
+        await cloudinary.uploader.destroy(publicId);
+      }
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+      const newImageResult = await cloudinary.uploader.upload(dataURI, { folder: "shabu-menu" });
+      imageUrl = newImageResult.secure_url;
+    }
+    const result = await pool.query( 'UPDATE menu SET name = $1, category = $2, image = $3 WHERE id = $4 RETURNING *', [name, category, imageUrl, id] );
+    
     // --- [แก้ไข] เพิ่มการ broadcast เมื่อแก้ไขเมนู ---
     broadcast({
       type: 'MENU_ITEM_UPDATED',
       payload: result.rows[0]
     });
-    
+    
     res.json({ success: true, item: result.rows[0] });
   } catch (err) {
     console.error(err);
@@ -306,162 +478,25 @@ app.delete('/api/menu/:id', isAuthenticated, async (req, res) => {
     }
     const imageToDelete = result.rows[0].image;
     if (imageToDelete) {
-      const publicIdWithFolder = imageToDelete.substring(imageToDelete.lastIndexOf('/') + 1, imageToDelete.lastIndexOf('.'));
-      await cloudinary.uploader.destroy(`shabumenu/${publicIdWithFolder}`);
+      const publicIdWithFolder = imageToDelete.substring(imageToDelete.indexOf('shabu-menu/'));
+      const publicId = publicIdWithFolder.substring(0, publicIdWithFolder.lastIndexOf('.'));
+      await cloudinary.uploader.destroy(publicId);
     }
-    
+
     // --- [แก้ไข] เพิ่มการ broadcast เมื่อลบเมนู ---
     broadcast({
       type: 'MENU_ITEM_DELETED',
-      payload: { id: parseInt(id) } // ส่ง id กลับไปในรูปของตัวเลข (หรือ string ก็ได้ แล้วแต่ front-end จะจัดการ)
+      payload: { id: id } // ส่งแค่ id กลับไปก็พอ
     });
 
-    res.json({ success: true, message: 'Menu item deleted' });
+    res.json({ success: true, message: 'ลบเมนูสำเร็จ' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Database or Cloudinary error' });
+    res.status(500).json({ error: 'Cloudinary or Database error' });
   }
 });
 
-// ----------------------------------------------------------------------
-// --- [ใหม่] ส่วนของ Order API ---
-// ----------------------------------------------------------------------
-
-// POST /api/orders: รับออเดอร์ใหม่
-app.post('/api/orders', async (req, res) => {
-  const { table, items } = req.body;
-  
-  if (!table || !items || Object.keys(items).length === 0) {
-    return res.status(400).json({ error: 'Missing table number or order items' });
-  }
-
-  try {
-    // 1. บันทึกออเดอร์ลง PostgreSQL
-    // items จะถูกเก็บเป็น JSONB โดยอัตโนมัติ
-    const result = await pool.query(
-      'INSERT INTO orders (table_number, items, status) VALUES ($1, $2, $3) RETURNING *', 
-      [table, items, 'pending']
-    );
-    const newOrder = result.rows[0];
-    
-    // 2. บันทึกออเดอร์ลง Google Sheet 
-    // ใช้ await เพื่อรอให้บันทึกเสร็จก่อนตอบกลับ (เพิ่มความมั่นใจในการเก็บข้อมูล)
-    await logOrderToSheet(newOrder.id, newOrder.table_number, newOrder.items); 
-
-    // 3. Broadcast ออเดอร์ใหม่ไปห้องครัว
-    broadcast({
-      type: 'NEW_ORDER',
-      payload: newOrder
-    });
-
-    res.status(201).json({ success: true, order: newOrder });
-  } catch (err) {
-    console.error('Error creating new order:', err);
-    res.status(500).json({ error: 'Database or Sheet error' });
-  }
-});
-
-// GET /api/orders: ดึงรายการออเดอร์
-// รองรับ query params: ?table=X สำหรับ frontend status check, ?status=pending/done สำหรับ kitchen/history
-app.get('/api/orders', async (req, res) => {
-  const { table, status } = req.query;
-  let query = 'SELECT * FROM orders';
-  const values = [];
-  const conditions = [];
-
-  if (table) {
-    conditions.push(`table_number = $${values.length + 1}`);
-    values.push(table);
-  }
-
-  if (status) {
-    conditions.push(`status = $${values.length + 1}`);
-    values.push(status);
-  }
-
-  if (conditions.length > 0) {
-    query += ' WHERE ' + conditions.join(' AND ');
-  }
-
-  query += ' ORDER BY created_at ASC'; // เรียงตามเวลาที่สร้าง
-
-  try {
-    const result = await pool.query(query, values);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Error fetching orders:', err);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// PUT /api/orders/:id: อัปเดตสถานะออเดอร์ (ใช้โดยครัว)
-app.put('/api/orders/:id', async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body; // status: 'done', 'pending', etc.
-
-  if (!status || !['done', 'pending'].includes(status)) {
-    return res.status(400).json({ error: 'Invalid status' });
-  }
-
-  try {
-    // อัปเดตสถานะและบันทึกเวลาที่เสร็จสิ้น
-    const result = await pool.query(
-      'UPDATE orders SET status = $1, completed_at = NOW() WHERE id = $2 RETURNING *',
-      [status, id]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-    const updatedOrder = result.rows[0];
-    
-    // Broadcast การอัปเดตสถานะ (แจ้งทั้งหน้าครัวและหน้าสั่งอาหารของลูกค้า)
-    broadcast({
-      type: 'ORDER_STATUS_UPDATED',
-      payload: updatedOrder
-    });
-
-    res.json({ success: true, order: updatedOrder });
-  } catch (err) {
-    console.error(`Error updating order ${id} status:`, err);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// DELETE /api/orders: ลบออเดอร์ที่สถานะ 'done' (ใช้สำหรับเคลียร์ประวัติ)
-// ต้องระบุ ?table=X&status=done ใน query parameter และต้องเป็น Admin
-app.delete('/api/orders', isAuthenticated, async (req, res) => {
-  const { table, status } = req.query;
-
-  if (!table || status !== 'done') {
-    return res.status(400).json({ error: 'Invalid parameters. Must specify table and status=done.' });
-  }
-
-  try {
-    // ลบออกจาก PostgreSQL
-    const result = await pool.query('DELETE FROM orders WHERE table_number = $1 AND status = $2 RETURNING *', [table, status]);
-    
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'No done orders found for this table' });
-    }
-
-    // Broadcast การเคลียร์ออเดอร์ (เพื่อให้หน้า History อัปเดต)
-    broadcast({
-        type: 'ORDERS_CLEARED',
-        payload: { table, status }
-    });
-    
-    res.json({ success: true, message: `Cleared ${result.rowCount} orders for table ${table}` });
-  } catch (err) {
-    console.error('Error clearing orders:', err);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-
-// ----------------------------------------------------------------------
-// --- ส่วนของ Server Start (เดิม) ---
-// ----------------------------------------------------------------------
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Shabu Order Backend running on port ${PORT}`);
 });
+
