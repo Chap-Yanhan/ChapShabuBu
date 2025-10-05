@@ -4,7 +4,7 @@ const { JWT } = require('google-auth-library');
 const creds = require('./credentials.json');
 
 // ❗️❗️ แก้ไขตรงนี้เป็น Sheet ID จริงๆ ของคุณ ❗️❗️
-const SHEET_ID = '153l20gBDNVvK5uV6fKiqeoCZZGbNwmS0J1Nyd3ReLgA'; 
+const SHEET_ID = '1md973ZA2pfD4GZeZw5LdsCrDw1p4Uo-iph7Mc1_oeRc'; 
 
 // ตั้งค่าการยืนยันตัวตนแบบใหม่
 const serviceAccountAuth = new JWT({
@@ -44,5 +44,6 @@ async function testConnection() {
     console.log('\n👉 กรุณาคัดลอกข้อความ Error ทั้งหมดด้านบนนี้ไปแจ้งผู้ช่วยของคุณ');
   }
 }
+
 
 testConnection();
